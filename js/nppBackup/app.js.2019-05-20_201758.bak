@@ -1,0 +1,24 @@
+
+
+function animacionTitulo(){
+	verde();
+}
+
+function verde (){
+	$(".main-titulo").animate({color:"green"}, "slow", function(){ amarillo() } )
+}
+function amarillo (){
+	$(".main-titulo").animate({color:"yellow"}, "slow", function(){ verde() })
+}
+
+
+
+arrancaJuego(){
+	animacionTitulo();
+}
+
+
+// Inicializacion del Juego
+$(function(){
+	arrancaJuego();
+});

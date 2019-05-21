@@ -1,0 +1,39 @@
+
+
+
+
+
+// Animacion del la pantalla titulo..
+function verde (){
+	$(".main-titulo").animate({color:"green"}, "slow", function(){ amarillo() } )
+}
+function amarillo (){
+	$(".main-titulo").animate({color:"yellow"}, "slow", function(){ verde() })
+}
+
+verde();
+
+
+
+
+
+// Inicializacion del Juego
+function arrancarJuego() {
+	$('.btn-reinicio').click(function(){
+		if($(this).text() === 'Reiniciar') {
+			window.location.reload(false); 
+		}
+		cargarRejilla();
+		$(this).text('Reiniciar');
+		$('#timer').startTimer({
+			onComplete: endGame
+		})		
+	});
+	
+	
+	
+}
+
+$(function() {
+	arrancarJuego();
+});

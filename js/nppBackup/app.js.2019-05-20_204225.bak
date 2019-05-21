@@ -1,0 +1,109 @@
+
+// Animacion del la pantalla titulo..
+function verde (){
+	$(".main-titulo").animate({color:"green"}, "slow", function(){ amarillo() } )
+}
+function amarillo (){
+	$(".main-titulo").animate({color:"yellow"}, "slow", function(){ verde() })
+}
+
+verde();
+
+function cargarRejilla() {
+	var top = 6;
+	var column = $('[class^="col-"]');
+
+	column.each(function () {
+		var dulces = $(this).children().length;
+		var agrega = top - dulces;
+		for (var i = 0; i < agrega; i++) {
+			var dulceTipo = getRandomInt(1, 5);
+			if (i === 0 && dulces < 1) {
+				$(this).append('<img src="image/' + dulceTipo + '.png" class="element"></img>');
+			} else {
+				$(this).find('img:eq(0)').before('<img src="image/' + dulceTipo + '.png" class="element"></img>');
+			}
+		}
+	});
+	eventosDulces();
+	validacionCombos();
+}
+
+function eventosDulces() {
+	$('img').draggable({
+		containment: '.panel-tablero',
+		droppable: 'img',
+		revert: true,
+		revertDuration: 500,
+		grid: [100, 100],
+		zIndex: 10,
+		drag: constrainCandyMovement
+	});
+	$('img').droppable({
+		drop: swapCandy
+	});
+	enableCandyEvents();
+}
+
+function validacionCombos() {
+	validacionCol();	
+	validacionRow();
+	// Si hay dulces que borrar
+	if ($('img.delete').length !== 0) {
+		eliminacionAnimada();
+	}
+}
+
+function eliminacionAnimada() {
+	disableCandyEvents();
+	$('img.delete').effect('pulsate', 400);
+	$('img.delete').animate({
+			opacity: '0'
+		}, {
+			duration: 300
+		})
+		.animate({
+			opacity: '0'
+		}, {
+			duration: 400,
+			complete: function () {
+				borrarDulce()
+					.then(checkBoardPromise)
+					.catch(showPromiseError);
+			},
+			queue: true
+		});
+}
+
+
+function borrarDulce() {
+	return new Promise(function (resolve, reject) {
+		if ($('img.delete').remove()) {
+			resolve(true);
+		} else {
+			reject('No se pudo eliminar Candy...');
+		}
+	})
+}
+
+
+// Inicializacion del Juego
+function arrancarJuego() {
+	$('.btn-reinicio').click(function(){
+		if($(this).text() === 'Reiniciar') {
+			window.location.reload(false); 
+		}
+		cargarRejilla();
+		$(this).text('Reiniciar');
+		$('#timer').startTimer({
+			onComplete: endGame
+		})		
+	});
+	
+	
+	
+}
+
+$(function() {
+	arrancarJuego();
+});

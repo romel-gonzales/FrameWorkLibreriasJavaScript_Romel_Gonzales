@@ -1,0 +1,434 @@
+
+
+	// inicio parpadeo del título
+	function verde (){
+		$(".main-titulo").animate({color:"green"}, "slow", function(){ amarillo() } )
+	}
+	function amarillo (){
+		$(".main-titulo").animate({color:"yellow"}, "slow", function(){ verde() })
+	}
+
+	verde();
+
+  $(".btn-reinicio").click(function(){
+    i=0;
+    marcador=0;
+    mov=0;
+    $(".panel-score").css("width","25%");
+    $("#marcador-text").html("0");
+    $("#movimientos-text").html("0");
+    $(this).html("REINICIAR");
+    $('#timer').timer({
+		countdown: true,
+		duration: '2m',
+		format: '%M:%S',
+		callback: function() {
+        alert('Time up!');
+        $('#timer').timer('reset');
+    	}
+	});
+  });
+  
+
+// inicio armando tablero
+  var linea=7; 
+  var columna = 7; 
+  var rejilla = []; 
+  var figuraValida=0;
+  var marcador = 0;
+  var movimiento = 0;
+
+
+  function dulce(r,c,obj,src) {
+    return {
+    r: r, // fila
+    c: c,  // columna
+    src:src, // imagen
+    locked:false, 
+    isInCombo:false, 
+    o:obj 
+    }
+  }
+
+  // arreglo con imagenes para cada tipo de caramelo
+  var dulceTipo=[];
+  dulceTipo[0]="image/1.png";
+  dulceTipo[1]="image/2.png";
+  dulceTipo[2]="image/3.png";
+  dulceTipo[3]="image/4.png";  
+            
+  // función que devuelve un caramelo aleatorio.
+  function selectDulceAleatorio() {
+    var pickInt = Math.floor((Math.random()*4));
+    return dulceTipo[pickInt];
+  }
+
+  // preparando el tablero
+  for (var r = 0; r < linea; r++) {
+   rejilla[r]=[];
+   for (var c =0; c< columna; c++) {
+      rejilla[r][c]= new dulce(r,c,null,selectDulceAleatorio());
+   }
+  }
+    
+  // Coordenadas iniciales:
+  var width = $('.panel-tablero').width();
+  var height = $('.panel-tablero').height(); 
+  var AnchoCelda = width / 7;
+  var AltoCelda = height / 7;
+  var margenAngosto = AnchoCelda/7;
+  var margenAltura = AltoCelda/7;
+
+  // creando imagenes en el tablero
+  for (var r = 0; r < linea; r++) {
+    for (var c =0; c< columna; c++) {
+      var cell = $("<img class='candy' id='candy_"+r+"_"+c+"' r='"+r+"' c='"+c+
+        "'ondrop='_onDrop(event)' ondragover='_onDragOverEnabled(event)'src='"+
+        rejilla[r][c].src+"' style='height:"+AltoCelda+"px'/>");
+      cell.attr("ondragstart","_ondragstart(event)");
+      $(".col-"+(c+1)).append(cell);
+      rejilla[r][c].o = cell;
+    }
+  }
+
+reponer();
+reponer();
+
+// el boton iniciar va a llevar a cero estos valores, asi q dsps lo tengo que borrar:
+marcador= 0 ;
+movimiento= 0 ;
+ $("#marcador-text").html("0");
+  $("#movimientos-text").html("0");
+
+
+ // -------------------------------------------------------------------------------------- ETAPA 2
+
+   // cuando se hace click sobre un candy
+  function _ondragstart(a)
+  {
+    a.dataTransfer.setData("text/plain", a.target.id);
+   }
+   
+   // cuando se mueve una gema por encima de otra sin soltarla 
+   function _onDragOverEnabled(e)
+   {
+     e.preventDefault();
+     console.log("pasando sobre caramelo " + e.target.id);
+    }
+           
+    // cuando soltas una gema sobre otra
+    function _onDrop(e)
+    {
+      // solo para firefox
+      var isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+      if (isFirefox) {
+        console.log("firefox compatibility");
+        e.preventDefault();
+      }
+ 
+     // obtener origen del candy
+     var src = e.dataTransfer.getData("text");
+     var sr = src.split("_")[1];
+     var sc = src.split("_")[2];
+
+     // obtener destino del candy
+     var dst = e.target.id;
+     var dr = dst.split("_")[1];
+     var dc = dst.split("_")[2];
+
+     // si la distancia es mayor a 1, no permitir el movimiento y alertar
+     var ddx = Math.abs(parseInt(sr)-parseInt(dr));
+     var ddy = Math.abs(parseInt(sc)-parseInt(dc));
+     if (ddx > 1 || ddy > 1)
+     {
+       alert("Los movimientos no pueden tener una distancia mayor a 1");
+       return;
+     }
+     else{
+        console.log("intercambio " + sr + "," + sc+ " to " + dr + "," + dc);
+        // intercambio de gemas
+        var tmp = rejilla[sr][sc].src;
+        rejilla[sr][sc].src = rejilla[dr][dc].src;
+        rejilla[sr][sc].o.attr("src",rejilla[sr][sc].src);
+        rejilla[dr][dc].src = tmp;
+        rejilla[dr][dc].o.attr("src",rejilla[dr][dc].src);
+
+        // sumar un movimiento a mi cantidad
+        movimiento+=1;
+        $("#movimientos-text").html(movimiento);
+
+        //buscar combinaciones
+        destruirCombos(); 
+        
+     }
+    
+    
+}
+
+
+
+ // -------------------------------------------------------------------------------------- ETAPA 3
+
+
+// buscar combinaciones horizontales y verticales para destruirlas
+      function destruirCombos()
+      {    
+      
+       // busqueda horizontal
+      
+      
+        for (var r = 0; r < linea; r++)
+        {           
+        
+        
+          var prevCell = null;
+          var figureLen = 0;
+          var figureStart = null;
+          var figureStop = null;
+          
+          for (var c=0; c< columna; c++)
+          {
+          
+            // saltear candys locked o que estan en combo.    
+            if (rejilla[r][c].locked || rejilla[r][c].isInCombo)
+            {
+              figureStart = null;
+              figureStop = null;
+              prevCell = null;  
+              figureLen = 1;
+              continue;
+            }
+            
+            // primer objeto del combo
+            if (prevCell==null) 
+            {
+              prevCell = rejilla[r][c].src;
+              figureStart = c;
+              figureLen = 1;
+              figureStop = null;
+              continue;
+            }
+            else
+            {
+              // segundo o posterior objeto del combo
+              var curCell = rejilla[r][c].src;
+              if (!(prevCell==curCell))
+              {
+                prevCell = rejilla[r][c].src;
+                figureStart = c;
+                figureStop=null;
+                figureLen = 1;
+                continue;
+              }
+              else
+              {
+                // incrementar combo
+                figureLen+=1;
+                if (figureLen==3)
+                {
+                  figuraValida+=1;
+                  marcador+=10;
+                  $("#marcador-text").html(marcador);
+                  figureStop = c;
+                  console.log("Combo de columna " + figureStart + " a columna " + figureStop);
+                  for (var ci=figureStart;ci<=figureStop;ci++)
+                  {
+                     
+                    rejilla[r][ci].isInCombo=true;
+                    rejilla[r][ci].src=null;                     
+                  }
+                  prevCell=null;
+                  figureStart = null;
+                  figureStop = null;
+                  figureLen = 1;
+                  continue;
+                }
+              }
+            }
+                  
+          }
+        }
+        
+       // busqueda vertical
+      
+      
+        for (var c=0; c< columna; c++)
+        {              
+          var prevCell = null;
+          var figureLen = 0;
+          var figureStart = null;
+          var figureStop = null;
+          
+          for (var r = 0; r < linea; r++)
+          {
+            
+            if (rejilla[r][c].locked || rejilla[r][c].isInCombo)
+            {
+              figureStart = null;
+              figureStop = null;
+              prevCell = null;  
+              figureLen = 1;
+              continue;
+            }
+            
+            if (prevCell==null) 
+            {
+              prevCell = rejilla[r][c].src;
+              figureStart = r;
+              figureLen = 1;
+              figureStop = null;
+              continue;
+            }
+            else
+            {
+              var curCell = rejilla[r][c].src;
+              if (!(prevCell==curCell))
+              {
+                prevCell = rejilla[r][c].src;
+                figureStart = r;
+                figureStop=null;
+                figureLen = 1;
+                continue;
+              }
+              else
+              {
+                figureLen+=1;
+                if (figureLen==3)
+                {
+                  figuraValida+=1;
+                  marcador+=10;
+                  $("#marcador-text").html(marcador);
+                  figureStop = r;
+                  console.log("Combo de fila " + figureStart + " a fila " + figureStop );
+                  for (var ci=figureStart;ci<=figureStop;ci++)
+                  {
+                     
+                    rejilla[ci][c].isInCombo=true;
+                    rejilla[ci][c].src=null;         
+                  }
+                  prevCell=null;
+                  figureStart = null;
+                  figureStop = null;
+                  figureLen = 1;
+                  continue;
+                }
+              }
+            }
+                  
+          }
+        }
+        
+        
+        // destruir combos
+        
+         var isCombo=false;
+         for (var r = 0;r<linea;r++)
+          for (var c=0;c<columna;c++)
+            if (rejilla[r][c].isInCombo)
+            { 
+              console.log("Combo disponible");
+              isCombo=true; 
+              // ACÁ FALTA LA ANIMACIÓN NADA MÁS, Y ESTARIA BIEN
+               reponer() // aca funciona bien 
+            }
+            
+        if (isCombo)  // Acá no entra nunca, el metodo lo termina llamando al final del reponer
+          desaparecerCombos();
+        else 
+        console.log("No más combos automáticos");
+        
+                          
+        
+      }
+    
+      //desaparecer candys borrados
+      function desaparecerCombos()
+      {
+         for (var r=0;r<linea;r++)  { 
+          for (var c=0;c<columna;c++){
+            if (rejilla[r][c].isInCombo)  // celda vacia
+            {
+              rejilla[r][c].o.animate({
+                opacity:0
+              },slow);
+            } 
+          }   
+        } 
+
+        // ACÁ ES DONDE DEBERIA IR EL REPONER() PERO NO ES LLAMADO NUNCA
+     //   $("[style*='opacity: 0']").promise().done(function() {
+      //       reponer();
+      //  });     
+      
+      }
+      
+   
+      
+      function reponer() {
+          // mover celdas vacias hacia arriba
+         for (var r=0;r<linea;r++)
+         {           
+          for (var c=0;c<columna;c++)
+          {  
+            if (rejilla[r][c].isInCombo)  // celda vacia
+            {
+              rejilla[r][c].o.attr("src","");
+                // deshabilitar cerlda del combo               
+              rejilla[r][c].isInCombo=false;
+               
+              for (var sr=r;sr>=0;sr--)
+              {
+                if (sr==0) break; 
+                if (rejilla[sr-1][c].locked) break;       
+                var tmp = rejilla[sr][c].src;
+                rejilla[sr][c].src=rejilla[sr-1][c].src;
+                rejilla[sr-1][c].src=tmp;
+              }
+            } 
+          }  
+        }   
+                          
+          // reordenando y reponiendo celdas
+          for (var r=0;r<linea;r++)
+          { for (var c = 0;c<columna;c++)
+            {
+              rejilla[r][c].o.attr("src",rejilla[r][c].src);
+              rejilla[r][c].o.css("opacity","1"); // acá podria meter animate
+              rejilla[r][c].isInCombo=false;
+              if (rejilla[r][c].src==null) 
+                rejilla[r][c].respawn=true;
+              if (rejilla[r][c].respawn==true)
+              {  
+                rejilla[r][c].o.off("ondragover");
+                rejilla[r][c].o.off("ondrop");
+                rejilla[r][c].o.off("ondragstart"); 
+                rejilla[r][c].respawn=false; // repuesto!
+                console.log("Reponiendo fila " + r+ " , columna " + c);
+                rejilla[r][c].src=selectDulceAleatorio();
+                rejilla[r][c].locked=false;
+                rejilla[r][c].o.attr("src",rejilla[r][c].src);
+                rejilla[r][c].o.attr("ondragstart","_ondragstart(event)");
+                rejilla[r][c].o.attr("ondrop","_onDrop(event)");
+                rejilla[r][c].o.attr("ondragover","_onDragOverEnabled(event)");
+              }
+            }
+          }
+              
+           
+              
+          console.log("celdas repuestas");
+          
+          // revisar si hay combos pendientes despues de reordenar
+          destruirCombos();
+         
+      } 
+       
+             
+// destruirCombos() es el metodo que elimina las fichas repetidas
+// reponer() , es el que repondrá las fichas faltantes
+
+// tengo que ejecutar el reponer() cuando:
+//     se carga por 1er vez el tablero (1 ó + veces, hasta asegurarme que no quedaron repetidos)
+//     cuando hago un movimiento y logro un match de 3,  (1 ó + veces, hasta asegurarme que no quedaron repetidos)
+// en este ultimo caso deberia saltar algun cartelito con animación que diga COMBO ! en la pantalla
+
